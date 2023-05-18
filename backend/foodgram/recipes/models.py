@@ -76,7 +76,7 @@ class IngredientRecipe(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=('ingredient', 'amount'),
-                name='Ингредиент и его количество должны быть с уникальной связью'
+                name='Ингредиент и количество должны быть с уникальной связью'
             )
         ]
 

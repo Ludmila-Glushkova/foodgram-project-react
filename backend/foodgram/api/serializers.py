@@ -155,7 +155,7 @@ class RecipeSerializer(ModelSerializer):
                 )
             if int(ingredient.get('amount')) < 1:
                 raise ValidationError(
-                    {'ingredients': ('Количество ингредиента должно быть больше 0')},
+                    {'ingredients': ('Количество должно быть больше 0')},
                     code=HTTP_400_BAD_REQUEST
                 )
             ingredient_list.append(current_ingredient)
