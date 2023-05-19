@@ -11,7 +11,7 @@ from rest_framework.status import (
 )
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from .filters import RecipeFilter
+from .filters import IngredientSearchFilter, RecipeFilter
 from .permissions import AuthorOrAdminOrReadOnly, IsAuthenticatedOrAdmin
 from recipes.models import (
     Basket,
@@ -33,17 +33,8 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-
-    def get_queryset(self):
-        name = self.request.query_params['name'].lower()
-        starts_with_queryset = list(
-            self.queryset.filter(name__istartswith=name)
-        )
-        cont_queryset = self.queryset.filter(name__icontains=name)
-        starts_with_queryset.extend(
-            [x for x in cont_queryset if x not in starts_with_queryset]
-        )
-        return starts_with_queryset
+    filter_backends = (IngredientSearchFilter,)
+    search_fields = ('^name',)
 
 
 class TagViewSet(ReadOnlyModelViewSet):
@@ -94,12 +85,13 @@ class RecipeViewSet(ModelViewSet):
             )
     def shopping_cart(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
+        basket_filter = Basket.objects.filter(
+            user=request.user,
+            recipe=recipe
+        )
         if request.method == 'POST':
             serializer = ShortRecipeSerializer(recipe)
-            if Basket.objects.filter(
-                user=request.user,
-                recipe=recipe
-            ).exists():
+            if basket_filter.exists():
                 return Response(
                     {'errors': 'Рецепт уже есть в списке покупок'},
                     status=HTTP_400_BAD_REQUEST
@@ -109,18 +101,12 @@ class RecipeViewSet(ModelViewSet):
                 recipe=recipe
             )
             return Response(serializer.data, status=HTTP_201_CREATED)
-        if not Basket.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).exists():
+        if not basket_filter.exists():
             return Response(
                 {'errors': 'Рецепта нет в корзине'},
                 status=HTTP_400_BAD_REQUEST
             )
-        Basket.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).delete()
+        basket_filter.delete()
         return Response(status=HTTP_204_NO_CONTENT)
 
     @action(methods=['post', 'delete'],
@@ -129,12 +115,13 @@ class RecipeViewSet(ModelViewSet):
             )
     def favorite(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
-        if request.method == 'POST':
-            serializer = ShortRecipeSerializer(recipe)
-            if Favorites.objects.filter(
+        favorites_filter = Favorites.objects.filter(
                 user=request.user,
                 recipe=recipe
-            ).exists():
+            )
+        if request.method == 'POST':
+            serializer = ShortRecipeSerializer(recipe)
+            if favorites_filter.exists():
                 return Response(
                     {'errors': 'Рецепт уже добавлен в избранное'},
                     status=HTTP_400_BAD_REQUEST
@@ -144,16 +131,10 @@ class RecipeViewSet(ModelViewSet):
                 recipe=recipe
             )
             return Response(serializer.data, status=HTTP_201_CREATED)
-        if not Favorites.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).exists():
+        if not favorites_filter.exists():
             return Response(
                 {'errors': 'Рецепта нет в избранном'},
                 status=HTTP_400_BAD_REQUEST
             )
-        Favorites.objects.filter(
-            user=request.user,
-            recipe=recipe
-        ).delete()
+        favorites_filter.delete()
         return Response(status=HTTP_204_NO_CONTENT)

@@ -15,7 +15,7 @@ services:
       - db
 
   backend:
-    image: ludmilaglushkova/foodgram_back:v1
+    image: ludmilaglushkova/foodgram_back:v2
     restart: always
     volumes:
       - static_value:/app/static/
