@@ -116,9 +116,9 @@ class RecipeViewSet(ModelViewSet):
     def favorite(self, request, pk):
         recipe = get_object_or_404(Recipe, id=pk)
         favorites_filter = Favorites.objects.filter(
-                user=request.user,
-                recipe=recipe
-            )
+            user=request.user,
+            recipe=recipe
+        )
         if request.method == 'POST':
             serializer = ShortRecipeSerializer(recipe)
             if favorites_filter.exists():
